@@ -1,0 +1,25 @@
+{
+  "name": "cloud-browser",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "web",
+    "extension"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run types && npm run build -w web && npm run build -w extension",
+    "types": "openapi-typescript api/openapi.yaml -o web/src/schema.d.ts",
+    "check": "npm run check -w web && npm run check -w extension",
+    "test": "node --test tests/*.test.mjs",
+    "acceptance": "playwright test",
+    "format": "prettier --write web/src extension/src tests api/openapi.yaml",
+    "test:extension": "npm run build -w extension && node tests/extension.e2e.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "openapi-typescript": "7.6.1",
+    "prettier": "^3.6.2",
+    "yaml": "^2.9.1"
+  }
+}

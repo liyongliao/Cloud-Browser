@@ -1,0 +1,5 @@
+**/dist/**
+node_modules/**
+web/src/schema.d.ts
+deploy/browser/chrome-seccomp.json
+package-lock.json

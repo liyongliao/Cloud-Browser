@@ -1,0 +1,22 @@
+{$DOMAIN:localhost} {
+ encode zstd gzip
+ header {
+  Referrer-Policy "no-referrer"
+  X-Content-Type-Options "nosniff"
+  X-Frame-Options "SAMEORIGIN"
+  Strict-Transport-Security "max-age=31536000"
+ }
+ @backend path /api/* /view/* /audio/* /control/* /healthz
+ handle @backend {
+  reverse_proxy api:8080 {
+   flush_interval -1
+   stream_timeout 8h
+  }
+ }
+ handle {
+  root * /srv/web
+  header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+  try_files {path} /index.html
+  file_server
+ }
+}

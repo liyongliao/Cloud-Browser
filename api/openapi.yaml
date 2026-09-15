@@ -1,0 +1,729 @@
+openapi: 3.0.3
+info:
+  title: Cloud Browser API
+  version: 0.1.0
+  description:
+    All writes require exact Origin. Authenticated writes also require
+    X-CSRF-Token. Viewer and audio lease routes are documented in
+    docs/architecture.md. Idempotency records are retained for seven days.
+servers:
+  - url: /api/v1
+paths:
+  /auth/login:
+    post:
+      summary: Login
+      operationId: post_auth_login
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+  /auth/activate:
+    post:
+      summary: Redeem one-time invitation
+      operationId: post_auth_activate
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - token
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                token:
+                  type: string
+  /auth/logout:
+    post:
+      summary: Logout and revoke connections
+      operationId: post_auth_logout
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+  /auth/password:
+    post:
+      summary: Change the current user's password and revoke other login sessions
+      operationId: post_auth_password
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 12
+                  maxLength: 256
+  /me:
+    get:
+      summary: Current user
+      operationId: get_me
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+  /browser:
+    get:
+      summary: Browser status
+      operationId: get_browser
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Browser"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+  /browser/start:
+    post:
+      summary: Start browser
+      operationId: post_browser_start
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Accepted"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  /browser/open:
+    post:
+      summary: Open browser
+      operationId: post_browser_open
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Accepted"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+  /browser/stop:
+    post:
+      summary: Stop browser
+      operationId: post_browser_stop
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Accepted"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  /browser/takeover:
+    post:
+      summary: Revoke old controller and acquire lease
+      operationId: post_browser_takeover
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lease"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+  /operations/{id}:
+    get:
+      summary: Read owned asynchronous operation
+      operationId: get_operations_id
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operation"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+  /files:
+    get:
+      summary: List user files
+      operationId: get_files
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Files"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+    post:
+      summary: Upload one file, at most 200 MiB
+      operationId: post_files
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+  /files/{id}/download:
+    get:
+      summary: Download attachment
+      operationId: get_files_id_download
+      responses:
+        "200":
+          description: Success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+  /files/{id}:
+    delete:
+      summary: Delete owned file
+      operationId: delete_files_id
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+  /admin/users:
+    get:
+      summary: List users (administrator)
+      operationId: get_admin_users
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+  /admin/invites:
+    post:
+      summary: Create 48-hour invitation (administrator)
+      operationId: post_admin_invites
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+  /admin/users/{id}/{action}:
+    post:
+      summary: Enable, disable or stop a user (administrator)
+      operationId: post_admin_users_id_action
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: action
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+  /admin/resources:
+    get:
+      summary: Host resources (administrator)
+      operationId: get_admin_resources
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+  /events:
+    get:
+      summary: SSE browser status
+      operationId: get_events
+      responses:
+        "200":
+          description: Success
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - session: []
+  /admin/metrics:
+    get:
+      summary: Session and operation metrics (administrator)
+      operationId: get_admin_metrics
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Counters and average start operation duration including queue time
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: cb_session
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - admin
+        - csrf
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        admin:
+          type: boolean
+        csrf:
+          type: string
+    Browser:
+      type: object
+      required:
+        - id
+        - state
+        - error
+        - lastConnectedAt
+        - idleSeconds
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum:
+            - STOPPED
+            - STARTING
+            - RUNNING
+            - STOPPING
+            - FAILED
+        error:
+          type: string
+        lastConnectedAt:
+          type: string
+          format: date-time
+        idleSeconds:
+          type: integer
+    Operation:
+      type: object
+      required:
+        - id
+        - state
+        - error
+        - sessionId
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum:
+            - QUEUED
+            - RUNNING
+            - SUCCEEDED
+            - FAILED
+            - UNKNOWN
+        error:
+          type: string
+        sessionId:
+          type: string
+    Lease:
+      type: object
+      required:
+        - lease
+        - viewerUrl
+        - audioUrl
+      properties:
+        lease:
+          type: string
+        viewerUrl:
+          type: string
+        audioUrl:
+          type: string
+    File:
+      type: object
+      required:
+        - id
+        - name
+        - directory
+        - size
+        - modified
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        directory:
+          type: string
+          enum:
+            - Uploads
+            - Downloads
+        size:
+          type: integer
+          format: int64
+        modified:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    Accepted:
+      type: object
+      required:
+        - operationId
+      properties:
+        operationId:
+          type: string
+    Files:
+      type: object
+      required:
+        - files
+        - usedBytes
+        - softLimitBytes
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/File"
+        usedBytes:
+          type: integer
+        softLimitBytes:
+          type: integer

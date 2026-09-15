@@ -1,0 +1,15 @@
+node_modules/
+dist/
+bin/
+.env
+.setup-complete
+.env.setup
+*.log
+.DS_Store
+coverage.out
+artifacts/
+
+acceptance-users.json
+playwright-report/
+test-results/
+docs/deployment-record.md

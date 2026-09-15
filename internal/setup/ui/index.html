@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloud Browser 安装向导</title>
+    <link rel="stylesheet" href="/setup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside>
+        <div class="brand"><span>☁</span><strong>Cloud Browser</strong></div>
+        <p class="aside-title">几步完成你的云端浏览器</p>
+        <ol id="steps">
+          <li class="active">
+            <b>1</b><span>访问设置<small>域名与 HTTPS</small></span>
+          </li>
+          <li>
+            <b>2</b><span>数据库<small>内置或外部 PostgreSQL</small></span>
+          </li>
+          <li>
+            <b>3</b><span>管理员<small>创建首个管理账号</small></span>
+          </li>
+          <li>
+            <b>4</b><span>容量确认<small>检查并开始安装</small></span>
+          </li>
+        </ol>
+        <div class="security">
+          🔒 初始化令牌只保存在当前标签页，安装完成后入口自动失效。
+        </div>
+      </aside>
+      <section class="content">
+        <header>
+          <span id="counter">第 1 步，共 4 步</span>
+          <div class="progress"><i id="progress"></i></div>
+        </header>
+        <div id="token-error" class="notice error hidden">
+          安装链接缺少或包含无效令牌。请重新运行安装命令并使用终端输出的完整链接。
+        </div>
+        <form id="wizard">
+          <fieldset data-step="0">
+            <p class="eyebrow">WELCOME</p>
+            <h1>先设置访问地址</h1>
+            <p class="lead">
+              域名需提前解析到这台服务器。新服务器推荐让 Cloud Browser 自动管理
+              HTTPS。
+            </p>
+            <label
+              >访问域名<input
+                name="domain"
+                placeholder="browser.example.com"
+                autocomplete="off"
+                required
+            /></label>
+            <div class="choices">
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="gatewayMode"
+                  value="direct"
+                  checked
+                /><span
+                  ><strong>自动 HTTPS（推荐）</strong
+                  ><small
+                    >直接使用服务器的 80/443 端口，自动申请证书。</small
+                  ></span
+                ></label
+              >
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="gatewayMode"
+                  value="reverse-proxy"
+                /><span
+                  ><strong>已有反向代理</strong
+                  ><small
+                    >服务仅监听 127.0.0.1:18088，由现有 Nginx 等接入。</small
+                  ></span
+                ></label
+              >
+            </div>
+          </fieldset>
+          <fieldset data-step="1" hidden>
+            <p class="eyebrow">DATABASE</p>
+            <h1>选择数据库</h1>
+            <p class="lead">
+              个人部署推荐内置数据库；已有 PostgreSQL 时可连接外部实例。
+            </p>
+            <div class="choices horizontal">
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="databaseMode"
+                  value="internal"
+                  checked
+                /><span
+                  ><strong>内置 PostgreSQL</strong
+                  ><small>自动启动并持久保存。</small></span
+                ></label
+              >
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="databaseMode"
+                  value="external"
+                /><span
+                  ><strong>外部 PostgreSQL</strong
+                  ><small>安装时验证连接。</small></span
+                ></label
+              >
+            </div>
+            <div id="external" class="grid hidden">
+              <label
+                >数据库主机<input
+                  name="databaseHost"
+                  value="127.0.0.1" /></label
+              ><label
+                >端口<input name="databasePort" type="number" value="5432"
+              /></label>
+            </div>
+            <div class="grid">
+              <label
+                >数据库名<input
+                  name="databaseName"
+                  value="cloudbrowser"
+                  required /></label
+              ><label
+                >数据库用户<input
+                  name="databaseUser"
+                  value="cloudbrowser"
+                  required
+              /></label>
+            </div>
+            <label
+              >数据库密码
+              <div class="password">
+                <input
+                  name="databasePassword"
+                  type="password"
+                  required
+                /><button type="button" id="generate">自动生成</button>
+              </div>
+              <small
+                >至少 12 位；自动生成的密码会保存在服务器配置中。</small
+              ></label
+            >
+            <label id="ssl" class="hidden"
+              >SSL 模式<select name="databaseSSLMode">
+                <option value="require">require</option>
+                <option value="verify-full">verify-full</option>
+                <option value="disable">disable</option>
+              </select></label
+            >
+          </fieldset>
+          <fieldset data-step="2" hidden>
+            <p class="eyebrow">ADMINISTRATOR</p>
+            <h1>创建管理账号</h1>
+            <p class="lead">该账号可以邀请用户、查看资源和停止异常会话。</p>
+            <label
+              >管理员邮箱<input
+                name="adminEmail"
+                type="email"
+                autocomplete="username"
+                placeholder="admin@example.com"
+                required
+            /></label>
+            <label
+              >管理员密码<input
+                name="adminPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="12"
+                required
+              /><small>至少 12 个字符。不会写入安装配置或日志。</small></label
+            >
+            <label
+              >再次输入密码<input
+                name="adminPasswordConfirm"
+                type="password"
+                autocomplete="new-password"
+                minlength="12"
+                required
+            /></label>
+          </fieldset>
+          <fieldset data-step="3" hidden>
+            <p class="eyebrow">CAPACITY</p>
+            <h1>确认运行规模</h1>
+            <p class="lead">
+              每个运行中的 Chrome 默认最多使用 2 GB 内存和 2 个 CPU 核。
+            </p>
+            <label
+              >最大同时运行会话<select name="maxSessions">
+                <option value="1">1 个（4 GB 内存服务器推荐）</option>
+                <option value="2">2 个</option>
+                <option value="3">3 个（建议至少 8 GB 内存）</option>
+              </select></label
+            >
+            <div id="summary" class="summary"></div>
+            <label class="confirm"
+              ><input
+                type="checkbox"
+                name="confirmed"
+                required
+              />我确认域名已解析，服务器端口和资源满足以上设置。</label
+            >
+          </fieldset>
+          <div class="actions">
+            <button type="button" id="back" class="secondary" hidden>
+              上一步</button
+            ><button type="button" id="next">下一步</button
+            ><button type="submit" id="install" hidden>开始安装</button>
+          </div>
+        </form>
+        <section id="installing" class="installing hidden">
+          <div class="loader">☁</div>
+          <p class="eyebrow">INSTALLING</p>
+          <h1 id="install-title">正在安装</h1>
+          <p id="install-message">请保持页面打开。</p>
+          <div class="install-progress"><i></i></div>
+          <small
+            >首次下载和构建 Chrome
+            通常需要几分钟，可以安全地让页面在后台运行。</small
+          ><a id="open-app" class="button hidden">打开 Cloud Browser</a
+          ><button id="retry" class="secondary hidden">返回修改</button>
+        </section>
+      </section>
+    </main>
+    <script src="/setup.js" defer></script>
+  </body>
+</html>

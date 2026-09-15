@@ -1,0 +1,15 @@
+{
+  "name": "@cloud-browser/extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.0.326",
+    "typescript": "5.9.2",
+    "vite": "^6.4.3"
+  }
+}

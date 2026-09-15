@@ -1,0 +1,72 @@
+name: cloud-browser
+services:
+  postgres:
+    image: postgres:17-bookworm
+    profiles: [database]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudbrowser}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudbrowser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks: [control]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ${POSTGRES_USER:-cloudbrowser} -d ${POSTGRES_DB:-cloudbrowser}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-cloudbrowser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cloudbrowser}?sslmode=disable}
+      PUBLIC_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
+      RUNNER_SOCKET: /run/cloud-browser/runner.sock
+    volumes: [runner-socket:/run/cloud-browser]
+    networks: [control]
+    depends_on:
+      runner: { condition: service_started }
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  runner:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: runner
+    network_mode: host
+    environment:
+      PROFILE_ROOT: /srv/cloud-browser/profiles
+      MAX_SESSIONS: ${MAX_SESSIONS:-3}
+      BROWSER_IMAGE: cloud-browser-browser:local
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /srv/cloud-browser/profiles:/srv/cloud-browser/profiles
+      - runner-socket:/run/cloud-browser
+      - ./deploy/browser/chrome-seccomp.json:/etc/cloud-browser/chrome-seccomp.json:ro
+    restart: unless-stopped
+  gateway:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: gateway
+    environment:
+      DOMAIN: ${GATEWAY_SITE:-${DOMAIN}}
+    ports: ["${GATEWAY_HTTP_BIND:-80}:80", "${GATEWAY_HTTPS_BIND:-443}:443"]
+    volumes: [caddy-data:/data, caddy-config:/config]
+    networks: [control]
+    depends_on: [api]
+    restart: unless-stopped
+networks:
+  control:
+    driver: bridge
+volumes:
+  database:
+  runner-socket:
+  caddy-data:
+  caddy-config:

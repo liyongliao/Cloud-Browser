@@ -1,0 +1,9 @@
+[Unit]
+Description=Encrypted Cloud Browser offline backup
+After=docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/cloud-browser
+Environment=AGE_RECIPIENT=replace-with-age-public-recipient
+ExecStart=/opt/cloud-browser/scripts/backup.sh

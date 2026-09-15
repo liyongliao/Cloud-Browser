@@ -1,0 +1,21 @@
+desktop:
+  resolution:
+    width: 1440
+    height: 900
+  allow_resize: true
+network:
+  interface: 0.0.0.0
+  websocket_port: 6901
+  use_ipv6: false
+  ssl:
+    require_ssl: false
+    pem_certificate: /home/browser/.vnc/tls.crt
+    pem_key: /home/browser/.vnc/tls.key
+user_session:
+  session_type: exclusive
+  new_session_disconnects_existing_exclusive_session: true
+  concurrent_connections_prompt: false
+logging:
+  level: 10
+command_line:
+  prompt: false
