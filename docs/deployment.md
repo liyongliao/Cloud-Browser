@@ -84,7 +84,7 @@ cat database.dump | docker compose -f compose.yaml -f compose.database.yaml exec
 
 ## 升级与回滚
 
-`v0.2.0` 管理程序暂不提供自动升级命令。升级前先停止新访问并完成数据库与 Profile 备份，阅读对应版本的发布说明，再使用发布文件中固定的镜像摘要更新。不要把 `latest` 作为可回滚版本记录。
+`v0.2.1` 管理程序暂不提供自动升级命令。升级前先停止新访问并完成数据库与 Profile 备份，阅读对应版本的发布说明，再使用发布文件中固定的镜像摘要更新。不要把 `latest` 作为可回滚版本记录。
 
 回滚 Chrome 必须同时恢复该镜像升级前的 Profile；直接把新版本 Profile 挂给旧 Chrome 可能失败。不要同时用两个容器挂载同一用户目录。自动升级和自动回滚会在后续版本单独设计。
 

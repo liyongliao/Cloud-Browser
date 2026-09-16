@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Cloud Browser API
-  version: 0.2.0
+  version: 0.2.1
   description:
     All writes require exact Origin. Authenticated writes also require
     X-CSRF-Token. Viewer and audio lease routes are documented in

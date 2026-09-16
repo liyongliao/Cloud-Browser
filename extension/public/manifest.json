@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Cloud Browser · 随身浏览器",
   "description": "一键将网页送到你的云端 Chrome，随时随地继续浏览。",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "permissions": ["activeTab", "contextMenus", "storage"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "popup.html", "default_title": "Cloud Browser" },

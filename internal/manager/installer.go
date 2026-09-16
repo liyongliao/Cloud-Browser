@@ -386,7 +386,13 @@ func (i *Installer) createAdministrator(ctx context.Context, config setup.Config
 	}
 	passwordPath := passwordFile.Name()
 	defer os.Remove(passwordPath)
-	if err = passwordFile.Chmod(0600); err == nil {
+	// The API image runs as uid 10001. Keep the temporary secret inside the
+	// root-only installation directory, while allowing that container user to
+	// read only this bind-mounted file.
+	if err = passwordFile.Chown(10001, 10001); err == nil {
+		err = passwordFile.Chmod(0400)
+	}
+	if err == nil {
 		_, err = passwordFile.WriteString(config.AdminPassword)
 	}
 	closeErr := passwordFile.Close()
