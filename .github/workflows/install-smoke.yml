@@ -40,7 +40,7 @@ jobs:
       - name: Install with one internal PostgreSQL
         run: |
           set -euo pipefail
-          token=$(sudo tr -d '\n' </var/lib/cloud-browser/setup-token)
+          token=$(sudo cat /var/lib/cloud-browser/setup-token | tr -d '\n')
           curl -fsS -X POST http://127.0.0.1:8090/api/setup/complete \
             -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
             --data-binary '{"domain":"browser.example.test","gatewayMode":"reverse-proxy","databaseMode":"internal","databaseHost":"","databasePort":0,"databaseName":"","databaseUser":"","databasePassword":"","databaseSSLMode":"","adminEmail":"admin@example.test","adminPassword":"temporary-test-password","maxSessions":1}'
