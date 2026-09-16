@@ -51,7 +51,7 @@ jobs:
             if printf '%s' "$response" | grep -q '"state":"FAILED"'; then exit 1; fi
             sleep 5
           done
-          test -f /var/lib/cloud-browser/.setup-complete
+          sudo test -f /var/lib/cloud-browser/.setup-complete
           curl -fsS http://127.0.0.1:18088/healthz
           test "$(docker ps -aq --filter name=cloud-browser-postgres-1 | wc -l)" -eq 1
           test "$(docker volume ls -q --filter name=cloud-browser-database | wc -l)" -eq 1
