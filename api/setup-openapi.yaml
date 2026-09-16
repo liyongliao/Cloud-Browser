@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Cloud Browser One-time Setup API
+  version: 0.2.0
+  description: Available only on the loopback-bound installation wizard and disabled after setup.
+servers:
+  - url: /api/setup
+security:
+  - setupToken: []
+paths:
+  /environment:
+    get:
+      summary: Detect reusable host services without changing them
+      responses:
+        "200":
+          description: Environment hints
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [localPostgresDetected]
+                properties:
+                  localPostgresDetected: { type: boolean }
+  /database/test:
+    post:
+      summary: Test an existing database from the application container network
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupConfig" }
+      responses:
+        "200":
+          {
+            description: Connection,
+            authentication and create-table permission succeeded,
+          }
+        "502": { description: Connection or permission check failed }
+  /status:
+    get:
+      summary: Read resumable setup progress
+      responses:
+        "200":
+          description: Current setup status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupStatus" }
+  /complete:
+    post:
+      summary: Validate configuration and begin installation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupConfig" }
+      responses:
+        "202": { description: Installation accepted }
+        "409": { description: Installation is running or already complete }
+components:
+  securitySchemes:
+    setupToken:
+      type: http
+      scheme: bearer
+  schemas:
+    SetupConfig:
+      type: object
+      required: [databaseMode]
+      properties:
+        databaseMode:
+          type: string
+          enum: [internal, local, remote]
+        databaseHost: { type: string }
+        databasePort: { type: integer, minimum: 1, maximum: 65535 }
+        databaseName: { type: string }
+        databaseUser: { type: string }
+        databasePassword: { type: string, writeOnly: true }
+        databaseSSLMode:
+          type: string
+          enum: [disable, require, verify-full]
+        domain: { type: string }
+        gatewayMode:
+          type: string
+          enum: [direct, reverse-proxy]
+        adminEmail: { type: string, format: email }
+        adminPassword: { type: string, writeOnly: true, minLength: 12 }
+        maxSessions: { type: integer, minimum: 1, maximum: 3 }
+    SetupStatus:
+      type: object
+      required: [state, step, message, progress]
+      properties:
+        state:
+          type: string
+          enum: [READY, RUNNING, FAILED, COMPLETE]
+        step: { type: string }
+        message: { type: string }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        origin: { type: string, format: uri }

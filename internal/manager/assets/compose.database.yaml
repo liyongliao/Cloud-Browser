@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudbrowser}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudbrowser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks: [control]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ${POSTGRES_USER:-cloudbrowser} -d ${POSTGRES_DB:-cloudbrowser}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    labels:
+      cloud-browser.installation: managed
+volumes:
+  database:
+    name: cloud-browser-database

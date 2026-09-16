@@ -7,6 +7,7 @@ COPY cmd/agent cmd/agent
 COPY internal internal
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /agent ./cmd/agent
 FROM ubuntu:24.04
+LABEL org.opencontainers.image.source="https://github.com/liyongliao/Cloud-Browser"
 ARG TARGETARCH
 ARG KASMVNC_VERSION=1.5.0
 ARG KASMVNC_SHA256=f599fe02e2175b9817b6165f74a5d2bebdc73118dde9181ba3410963bed7ae1e

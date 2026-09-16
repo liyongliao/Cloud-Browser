@@ -9,11 +9,13 @@ import (
 )
 
 func main() {
+	if os.Getenv("SETUP_DRY_RUN") != "1" {
+		log.Fatal("standalone production setup moved to the cloud-browser command; set SETUP_DRY_RUN=1 for UI preview")
+	}
 	server, err := setup.New(setup.Options{
-		Token:   os.Getenv("SETUP_TOKEN"),
-		Root:    os.Getenv("SETUP_ROOT"),
-		DryRun:  os.Getenv("SETUP_DRY_RUN") == "1",
-		Command: setup.CommandRunner,
+		Token:  os.Getenv("SETUP_TOKEN"),
+		Root:   os.Getenv("SETUP_ROOT"),
+		DryRun: true,
 	})
 	if err != nil {
 		log.Fatal(err)

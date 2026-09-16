@@ -13,10 +13,10 @@
         <p class="aside-title">几步完成你的云端浏览器</p>
         <ol id="steps">
           <li class="active">
-            <b>1</b><span>访问设置<small>域名与 HTTPS</small></span>
+            <b>1</b><span>数据库<small>选择 PostgreSQL 来源</small></span>
           </li>
           <li>
-            <b>2</b><span>数据库<small>内置或外部 PostgreSQL</small></span>
+            <b>2</b><span>访问设置<small>域名与 HTTPS</small></span>
           </li>
           <li>
             <b>3</b><span>管理员<small>创建首个管理账号</small></span>
@@ -39,8 +39,97 @@
         </div>
         <form id="wizard">
           <fieldset data-step="0">
-            <p class="eyebrow">WELCOME</p>
-            <h1>先设置访问地址</h1>
+            <p class="eyebrow">DATABASE</p>
+            <h1>选择数据库来源</h1>
+            <p class="lead">
+              打开向导不会创建数据库。只有确认使用内置 PostgreSQL
+              后，安装程序才会创建一个项目专用服务。
+            </p>
+            <div class="choices database-choices">
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="databaseMode"
+                  value="internal"
+                  checked
+                /><span
+                  ><strong>内置 PostgreSQL</strong
+                  ><small>提交安装后才下载和创建，自动生成凭据。</small></span
+                ></label
+              >
+              <label class="choice"
+                ><input type="radio" name="databaseMode" value="local" /><span
+                  ><strong>本机已有 PostgreSQL</strong
+                  ><small>连接这台 Linux 服务器已经运行的实例。</small
+                  ><em id="local-detected" class="detected hidden"
+                    >检测到本机 5432 端口</em
+                  ></span
+                ></label
+              >
+              <label class="choice"
+                ><input type="radio" name="databaseMode" value="remote" /><span
+                  ><strong>远程 PostgreSQL</strong
+                  ><small>连接云数据库或另一台服务器上的实例。</small></span
+                ></label
+              >
+            </div>
+            <div id="existing-database" class="hidden">
+              <div id="remote-host" class="hidden">
+                <label
+                  >数据库主机<input
+                    name="databaseHost"
+                    placeholder="db.example.com"
+                /></label>
+              </div>
+              <div class="grid">
+                <label
+                  >端口<input
+                    name="databasePort"
+                    type="number"
+                    min="1"
+                    max="65535"
+                    value="5432"
+                /></label>
+                <label
+                  >SSL 模式<select name="databaseSSLMode">
+                    <option value="disable">disable</option>
+                    <option value="require">require</option>
+                    <option value="verify-full">verify-full</option>
+                  </select></label
+                >
+              </div>
+              <div class="grid">
+                <label
+                  >数据库名<input name="databaseName" value="cloudbrowser"
+                /></label>
+                <label
+                  >数据库用户<input name="databaseUser" value="cloudbrowser"
+                /></label>
+              </div>
+              <label
+                >数据库密码
+                <input
+                  name="databasePassword"
+                  type="password"
+                  autocomplete="off"
+                />
+              </label>
+              <div id="local-help" class="notice hidden">
+                “本机”指运行 Cloud Browser 的 Linux 服务器。PostgreSQL 必须监听
+                Docker 网桥可访问的地址，并在 pg_hba.conf 中允许 Docker
+                网段；仅监听 127.0.0.1 时无法连接。
+              </div>
+              <div class="database-test-row">
+                <button type="button" id="test-database" class="secondary">
+                  测试连接与权限
+                </button>
+                <span id="database-test-result"></span>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset data-step="1" hidden>
+            <p class="eyebrow">ACCESS</p>
+            <h1>设置访问地址</h1>
             <p class="lead">
               域名需提前解析到这台服务器。新服务器推荐让 Cloud Browser 自动管理
               HTTPS。
@@ -79,78 +168,6 @@
                 ></label
               >
             </div>
-          </fieldset>
-          <fieldset data-step="1" hidden>
-            <p class="eyebrow">DATABASE</p>
-            <h1>选择数据库</h1>
-            <p class="lead">
-              个人部署推荐内置数据库；已有 PostgreSQL 时可连接外部实例。
-            </p>
-            <div class="choices horizontal">
-              <label class="choice"
-                ><input
-                  type="radio"
-                  name="databaseMode"
-                  value="internal"
-                  checked
-                /><span
-                  ><strong>内置 PostgreSQL</strong
-                  ><small>自动启动并持久保存。</small></span
-                ></label
-              >
-              <label class="choice"
-                ><input
-                  type="radio"
-                  name="databaseMode"
-                  value="external"
-                /><span
-                  ><strong>外部 PostgreSQL</strong
-                  ><small>安装时验证连接。</small></span
-                ></label
-              >
-            </div>
-            <div id="external" class="grid hidden">
-              <label
-                >数据库主机<input
-                  name="databaseHost"
-                  value="127.0.0.1" /></label
-              ><label
-                >端口<input name="databasePort" type="number" value="5432"
-              /></label>
-            </div>
-            <div class="grid">
-              <label
-                >数据库名<input
-                  name="databaseName"
-                  value="cloudbrowser"
-                  required /></label
-              ><label
-                >数据库用户<input
-                  name="databaseUser"
-                  value="cloudbrowser"
-                  required
-              /></label>
-            </div>
-            <label
-              >数据库密码
-              <div class="password">
-                <input
-                  name="databasePassword"
-                  type="password"
-                  required
-                /><button type="button" id="generate">自动生成</button>
-              </div>
-              <small
-                >至少 12 位；自动生成的密码会保存在服务器配置中。</small
-              ></label
-            >
-            <label id="ssl" class="hidden"
-              >SSL 模式<select name="databaseSSLMode">
-                <option value="require">require</option>
-                <option value="verify-full">verify-full</option>
-                <option value="disable">disable</option>
-              </select></label
-            >
           </fieldset>
           <fieldset data-step="2" hidden>
             <p class="eyebrow">ADMINISTRATOR</p>
@@ -218,8 +235,7 @@
           <p id="install-message">请保持页面打开。</p>
           <div class="install-progress"><i></i></div>
           <small
-            >首次下载和构建 Chrome
-            通常需要几分钟，可以安全地让页面在后台运行。</small
+            >首次下载服务镜像通常需要几分钟；安装在服务器后台继续运行，可以安全关闭当前页面。</small
           ><a id="open-app" class="button hidden">打开 Cloud Browser</a
           ><button id="retry" class="secondary hidden">返回修改</button>
         </section>

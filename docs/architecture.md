@@ -8,6 +8,14 @@
 
 Browser Agent 拥有与用户浏览器相同的权限，不是用于隔离同一用户内部程序的安全沙箱；用户自己的浏览器扩展、网站沙箱漏洞或 Profile 文件改动可能破坏本人的数据。跨账号边界依赖容器、网桥、网关授权以及宿主机隔离。
 
+## 单文件安装边界
+
+`cloud-browser` 是静态 Linux 管理程序，内嵌 Compose、AppArmor、seccomp、网络隔离配置和安装网页。向导只监听 loopback，Bearer 令牌保存在 0600 文件中并通过 URL fragment 进入浏览器；成功后令牌删除，安装接口拒绝再次初始化。
+
+基础 Compose 不声明 PostgreSQL。选择内置数据库时才合并数据库覆盖文件；选择本机或远程数据库时既不加载覆盖文件，也不创建 PostgreSQL 数据卷。已有数据库测试与初始化均从 `cloud-browser-control` 容器网络发起，本机模式通过 Docker host gateway 访问宿主机。数据库密码不会写入命令行参数或日志，但会以 0600 权限保存在应用环境文件中，供长期运行的 API 使用。
+
+正式发布的管理程序绑定镜像摘要。Runner 仍是唯一持有 Docker socket 的长期服务；安装程序以 root 运行是为了安装系统依赖、写入隔离策略及控制 Compose，安装页面不能执行任意命令。
+
 ## 身份与输入
 
 - Argon2id 固定参数：64 MiB、2 次迭代、2 路并行；每个密码独立随机盐。

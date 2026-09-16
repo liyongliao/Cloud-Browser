@@ -17,23 +17,41 @@
 
 ## 首次安装
 
-准备一台带公网 IP 的 x86_64 Debian/Ubuntu 服务器，并把域名 A 记录指向该服务器。随后只需执行：
+准备一台带公网 IP 的 x86_64 Ubuntu 24.04 或 Debian 13 服务器，并把域名 A 记录指向该服务器。下载并运行单个管理程序：
 
 ```bash
-git clone git@github.com:liyongliao/Cloud-Browser.git
-cd Cloud-Browser
-sudo ./scripts/install.sh
+curl -fLO https://github.com/liyongliao/Cloud-Browser/releases/latest/download/cloud-browser-linux-amd64
+curl -fLO https://github.com/liyongliao/Cloud-Browser/releases/latest/download/cloud-browser-linux-amd64.sha256
+sha256sum -c cloud-browser-linux-amd64.sha256
+chmod +x cloud-browser-linux-amd64
+sudo ./cloud-browser-linux-amd64
 ```
 
-脚本会自动安装 Docker、Compose 与隔离依赖，随后输出一次性安装链接。打开链接后，通过网页完成域名、HTTPS、数据库、管理员账号和并发容量设置。
+程序在后台启动仅监听本机的一次性向导，并显示 SSH 转发命令。网页先让你选择数据库来源，再设置域名、管理员账号和并发容量。程序会复用现有 Docker；缺少 Docker 时只在提交安装或测试已有数据库连接后安装。
 
-![网页选择内置或外部 PostgreSQL](docs/images/setup-database.png)
+![网页选择 PostgreSQL 来源](docs/images/setup-database.png)
 
-向导会在开始前汇总配置。管理员密码只用于创建账号，不写入 `.env` 或安装日志；初始化完成后入口失效。
+数据库支持三种方式：
+
+- 内置 PostgreSQL：确认安装后才下载镜像，只创建一个项目专用服务和数据卷，失败重试会复用它。
+- 本机已有 PostgreSQL：通过 Docker 宿主网关连接当前 Linux 服务器的实例，不创建数据库服务。
+- 远程 PostgreSQL：连接云数据库或另一台服务器，不创建本机数据库服务。
+
+已有数据库可在向导中从应用实际容器网络测试连接、认证与建表权限。连接失败不会切换成内置数据库。管理员密码只用于创建账号，不写入部署配置或安装日志；初始化完成后入口失效。
 
 ![安装前确认](docs/images/setup-summary.png)
 
 完整图文步骤、已有 Nginx 的接入方式和故障处理见 [首次安装教程](docs/installation-guide.md)。
+
+安装后的日常管理统一使用：
+
+```bash
+sudo cloud-browser status
+sudo cloud-browser start
+sudo cloud-browser stop
+sudo cloud-browser logs
+sudo cloud-browser doctor
+```
 
 ## 日常使用
 
@@ -61,11 +79,13 @@ flowchart LR
 | ------------------------------------ | ------------------------------------------------------- |
 | Web 与插件                           | React、TypeScript、Vite、Manifest V3                    |
 | API、Runner、Browser Agent、安装向导 | Go                                                      |
-| 数据库                               | PostgreSQL 17 或外部 PostgreSQL                         |
+| 数据库                               | 内置 PostgreSQL 17、本机已有或远程 PostgreSQL           |
 | 浏览器                               | Ubuntu 24.04、Google Chrome Stable、KasmVNC、PulseAudio |
 | 网关与部署                           | Caddy、Docker Compose；可接入现有 Nginx                 |
 
-接口契约位于 [api/openapi.yaml](api/openapi.yaml)，安全与会话边界见 [架构说明](docs/architecture.md)，当前验证范围见 [验收记录](docs/verification.md)。
+管理程序是静态 Linux 可执行文件，内嵌运行模板和隔离配置；正式发布版通过镜像摘要固定 API、Runner、网页网关和浏览器镜像。服务器不需要 Go、Node.js、Git 或本地镜像构建。
+
+业务接口契约位于 [api/openapi.yaml](api/openapi.yaml)，一次性安装接口位于 [api/setup-openapi.yaml](api/setup-openapi.yaml)。安全与会话边界见 [架构说明](docs/architecture.md)，当前验证范围见 [验收记录](docs/verification.md)。
 
 ## 本地开发
 

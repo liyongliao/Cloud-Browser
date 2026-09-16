@@ -1,0 +1,13 @@
+[Unit]
+Description=Cloud Browser network isolation
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/etc/cloud-browser/firewall.sh
+
+[Install]
+WantedBy=docker.service

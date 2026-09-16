@@ -1,0 +1,65 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with: { go-version: "1.25.x" }
+      - uses: actions/setup-node@v5
+        with: { node-version: "22", cache: npm }
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish runtime images
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          owner=$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          for target in api runner gateway; do
+            docker buildx build --platform linux/amd64 --target "$target" \
+              -t "ghcr.io/$owner/cloud-browser-$target:$TAG" \
+              -t "ghcr.io/$owner/cloud-browser-$target:latest" --push -f deploy/Dockerfile .
+          done
+          docker buildx build --platform linux/amd64 \
+            -t "ghcr.io/$owner/cloud-browser-browser:$TAG" \
+            -t "ghcr.io/$owner/cloud-browser-browser:latest" --push -f deploy/browser/Dockerfile .
+      - name: Build digest-pinned manager
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          owner=$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          digest() { docker buildx imagetools inspect "$1" | sed -n 's/^Digest:[[:space:]]*//p' | head -n1; }
+          api="ghcr.io/$owner/cloud-browser-api@$(digest "ghcr.io/$owner/cloud-browser-api:$TAG")"
+          runner="ghcr.io/$owner/cloud-browser-runner@$(digest "ghcr.io/$owner/cloud-browser-runner:$TAG")"
+          gateway="ghcr.io/$owner/cloud-browser-gateway@$(digest "ghcr.io/$owner/cloud-browser-gateway:$TAG")"
+          browser="ghcr.io/$owner/cloud-browser-browser@$(digest "ghcr.io/$owner/cloud-browser-browser:$TAG")"
+          postgres="postgres@$(digest postgres:17-bookworm)"
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+            -ldflags "-s -w -X cloudbrowser/internal/manager.Version=$TAG -X cloudbrowser/internal/manager.APIImage=$api -X cloudbrowser/internal/manager.RunnerImage=$runner -X cloudbrowser/internal/manager.GatewayImage=$gateway -X cloudbrowser/internal/manager.BrowserImage=$browser -X cloudbrowser/internal/manager.PostgresImage=$postgres" \
+            -o dist/cloud-browser-linux-amd64 ./cmd/cloud-browser
+          (cd dist && sha256sum cloud-browser-linux-amd64 > cloud-browser-linux-amd64.sha256)
+      - name: Build browser extension package
+        run: |
+          npm ci
+          npm run build -w extension
+          (cd extension/dist && zip -qr ../../dist/cloud-browser-extension.zip .)
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" dist/* --generate-notes --verify-tag

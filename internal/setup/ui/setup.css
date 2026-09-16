@@ -205,6 +205,31 @@ select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+.database-choices {
+  grid-template-columns: repeat(3, 1fr);
+}
+.database-test-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.database-test-row button {
+  flex: 0 0 auto;
+}
+#database-test-result {
+  font-size: 13px;
+  line-height: 1.45;
+}
+#database-test-result.testing {
+  color: #6a7d74;
+}
+#database-test-result.success {
+  color: #26734d;
+}
+#database-test-result.failure {
+  color: #9a382f;
+}
 .choice {
   display: flex;
   gap: 12px;
@@ -230,6 +255,16 @@ select:focus {
 .choice strong,
 .choice small {
   display: block;
+}
+.choice .detected {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #26734d;
+  background: #e4f2e8;
+  font-size: 11px;
+  font-style: normal;
 }
 .choice small {
   margin-top: 5px;
@@ -416,6 +451,7 @@ button,
     font-size: 28px;
   }
   .choices.horizontal,
+  .database-choices,
   .grid,
   .summary {
     grid-template-columns: 1fr;

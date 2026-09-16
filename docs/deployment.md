@@ -2,7 +2,7 @@
 
 ## 主机要求
 
-以 Ubuntu 24.04 或 Debian 13、x86_64、4 核、8 GB 内存、SSD 和 3 并发作为验证起点。需要支持 AppArmor、用户命名空间的 Docker Engine、iptables/DOCKER-USER、Docker Compose、Python 3。Docker Desktop、rootless Docker、IPv6-only 出口和 nftables 原生 Docker 防火墙后端未纳入首版支持。
+以 Ubuntu 24.04 或 Debian 13、x86_64、4 核、8 GB 内存、SSD 和 3 并发作为验证起点。管理程序会按需安装或复用 Docker Engine、Compose、AppArmor 和 iptables。Docker Desktop、rootless Docker、IPv6-only 出口和 nftables 原生 Docker 防火墙后端未纳入首版支持。
 
 浏览器镜像不禁用 Chrome 沙箱、不请求特权模式。若宿主机禁止 user namespace，先修复主机策略，不能通过 `--no-sandbox` 或 privileged 绕过。
 
@@ -16,27 +16,31 @@
 
 ## 首次安装
 
-将域名 A 记录指向服务器，然后运行：
+将域名 A 记录指向服务器，下载并校验发布文件：
 
 ```bash
-git clone git@github.com:liyongliao/Cloud-Browser.git
-cd Cloud-Browser
-sudo ./scripts/install.sh
+curl -fLO https://github.com/liyongliao/Cloud-Browser/releases/latest/download/cloud-browser-linux-amd64
+curl -fLO https://github.com/liyongliao/Cloud-Browser/releases/latest/download/cloud-browser-linux-amd64.sha256
+sha256sum -c cloud-browser-linux-amd64.sha256
+chmod +x cloud-browser-linux-amd64
+sudo install -m 0755 cloud-browser-linux-amd64 /usr/local/bin/cloud-browser
+sudo cloud-browser setup
 ```
 
-脚本自动安装 Docker、Compose、AppArmor 和防火墙依赖，准备浏览器隔离环境，并在 8090 端口启动一次性安装向导。打开终端输出的带令牌链接，在网页设置 HTTPS 接入方式、内置或外部 PostgreSQL、管理员邮箱和密码、最大并发会话。
+向导只监听 `127.0.0.1:8090`，通过终端提示的 SSH 隧道访问。数据库必须选择内置、本机已有或远程之一。打开向导不会创建 PostgreSQL；仅在用户提交内置模式后创建项目专用服务。本机和远程模式会从应用容器网络验证连接与建表权限，不创建数据库服务或数据卷。
 
-向导实际连接数据库后才创建表和管理员，随后构建 Chrome 与正式服务。管理员密码不会写入 `.env`。安装完成标记为 `.setup-complete`；向导永久拒绝重复初始化，并在 10 分钟后自动删除临时容器。完整截图和 SSH 隧道方法见 [首次安装教程](installation-guide.md)。
+安装程序拉取摘要固定的预构建镜像，实际连接数据库后才创建表和管理员。管理员密码不会写入部署配置。安装完成后向导永久拒绝重复初始化并在 10 分钟后关闭。完整截图和数据库三种路径见 [首次安装教程](installation-guide.md)。
 
-自动安装目前支持 x86_64 Debian/Ubuntu。手动部署、升级或故障恢复仍可使用本节后续的 Compose 命令。
+旧版 `/opt/cloud-browser` 源码部署会被管理程序识别并接入，不重建数据库、数据卷或管理员。
 
 不要直接启用公开注册或将此单机版本当成恶意租户托管服务。
 
 ## 运行检查
 
 ```bash
-docker compose ps
-docker compose logs --tail=100 api
+sudo cloud-browser status
+sudo cloud-browser doctor
+sudo cloud-browser logs
 sudo systemctl status cloud-browser-firewall
 sudo iptables -S DOCKER-USER
 sudo iptables -S CB-EGRESS
@@ -46,7 +50,7 @@ docker stats --no-stream
 
 管理页显示运行数、可用内存、磁盘空间。磁盘剩余不足 15% 时显示告警，并阻止新会话和上传。会话初始限制为内存 2 GiB、CPU 2 核、SHM 512 MiB、512 个进程；全机还必须保留至少 1.5 GiB 可用内存才能新启动。默认最多 3 个运行容器，`MAX_SESSIONS` 可降低上限。
 
-修改 MAX_SESSIONS 后重建 Runner：`docker compose up -d runner`。降低限制不会主动杀掉现有会话。
+新安装的运行文件位于 `/var/lib/cloud-browser`，Profile 位于 `/srv/cloud-browser/profiles`。降低会话限制不会主动停止现有会话。
 
 KasmVNC 内部认证由网关注入；不要开启代理访问日志中的 Cookie、Authorization 或完整 `/view/<lease>` 路径。平台不记录完整网址；异步操作执行期间数据库短暂保存目标 URL，完成后清空正文，仅保留请求摘要用于幂等比较。浏览器历史仍在用户 Profile 内。
 
@@ -70,8 +74,8 @@ sudo AGE_RECIPIENT='age1...' ./scripts/backup.sh
 4. 使用记录的浏览器镜像版本。先启动 PostgreSQL，执行：
 
 ```bash
-docker compose up -d postgres
-cat database.dump | docker compose exec -T postgres pg_restore -U cloudbrowser -d cloudbrowser --clean --if-exists
+docker compose -f compose.yaml -f compose.database.yaml up -d postgres
+cat database.dump | docker compose -f compose.yaml -f compose.database.yaml exec -T postgres pg_restore -U cloudbrowser -d cloudbrowser --clean --if-exists
 ```
 
 5. 重新执行主机准备脚本，启动 Runner/API/网关。调度器会校正数据库中的旧会话状态。逐用户确认标签页、登录、文件和接管行为。
@@ -80,9 +84,9 @@ cat database.dump | docker compose exec -T postgres pg_restore -U cloudbrowser -
 
 ## 升级与回滚
 
-先停止新访问并运行备份。记录旧镜像 ID，重新构建 Chrome 镜像和服务，完成单用户验收后恢复邀请用户使用。Chrome Stable 安装包在构建时由 Google 签名仓库提供；构建生成的镜像需要按 ID 留存，不能假定重新构建得到同一版本。
+`v0.2.0` 管理程序暂不提供自动升级命令。升级前先停止新访问并完成数据库与 Profile 备份，阅读对应版本的发布说明，再使用发布文件中固定的镜像摘要更新。不要把 `latest` 作为可回滚版本记录。
 
-回滚 Chrome 必须同时恢复该镜像升级前的 Profile；直接把新版本 Profile 挂给旧 Chrome 可能失败。不要同时用两个容器挂载同一用户目录。
+回滚 Chrome 必须同时恢复该镜像升级前的 Profile；直接把新版本 Profile 挂给旧 Chrome 可能失败。不要同时用两个容器挂载同一用户目录。自动升级和自动回滚会在后续版本单独设计。
 
 ## 目标服务器验收
 

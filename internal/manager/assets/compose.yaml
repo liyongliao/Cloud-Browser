@@ -1,17 +1,15 @@
 name: cloud-browser
 services:
   api:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile
-      target: api
+    image: ${API_IMAGE}
     environment:
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
-      PUBLIC_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
+      DATABASE_URL: ${DATABASE_URL}
+      PUBLIC_ORIGIN: https://${DOMAIN}
       RUNNER_SOCKET: /run/cloud-browser/runner.sock
     extra_hosts:
       - host.docker.internal:host-gateway
-    volumes: [runner-socket:/run/cloud-browser]
+    volumes:
+      - runner-socket:/run/cloud-browser
     networks: [control]
     depends_on:
       runner: { condition: service_started }
@@ -20,38 +18,46 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
+    labels:
+      cloud-browser.installation: managed
   runner:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile
-      target: runner
+    image: ${RUNNER_IMAGE}
     network_mode: host
     environment:
       PROFILE_ROOT: /srv/cloud-browser/profiles
-      MAX_SESSIONS: ${MAX_SESSIONS:-3}
-      BROWSER_IMAGE: cloud-browser-browser:local
+      MAX_SESSIONS: ${MAX_SESSIONS:-1}
+      BROWSER_IMAGE: ${BROWSER_IMAGE}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /srv/cloud-browser/profiles:/srv/cloud-browser/profiles
       - runner-socket:/run/cloud-browser
-      - ./deploy/browser/chrome-seccomp.json:/etc/cloud-browser/chrome-seccomp.json:ro
+      - /etc/cloud-browser/chrome-seccomp.json:/etc/cloud-browser/chrome-seccomp.json:ro
     restart: unless-stopped
+    labels:
+      cloud-browser.installation: managed
   gateway:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile
-      target: gateway
+    image: ${GATEWAY_IMAGE}
     environment:
       DOMAIN: ${GATEWAY_SITE:-${DOMAIN}}
-    ports: ["${GATEWAY_HTTP_BIND:-80}:80", "${GATEWAY_HTTPS_BIND:-443}:443"]
-    volumes: [caddy-data:/data, caddy-config:/config]
+    ports:
+      - ${GATEWAY_HTTP_BIND:-80}:80
+      - ${GATEWAY_HTTPS_BIND:-443}:443
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
     networks: [control]
     depends_on: [api]
     restart: unless-stopped
+    labels:
+      cloud-browser.installation: managed
 networks:
   control:
-    driver: bridge
+    name: cloud-browser-control
+    external: true
 volumes:
   runner-socket:
+    name: cloud-browser-runner-socket
   caddy-data:
+    name: cloud-browser-caddy-data
   caddy-config:
+    name: cloud-browser-caddy-config
