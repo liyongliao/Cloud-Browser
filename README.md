@@ -23,8 +23,8 @@
 curl -fLO https://github.com/liyongliao/Cloud-Browser/releases/latest/download/cloud-browser-linux-amd64
 curl -fLO https://github.com/liyongliao/Cloud-Browser/releases/latest/download/cloud-browser-linux-amd64.sha256
 sha256sum -c cloud-browser-linux-amd64.sha256
-chmod +x cloud-browser-linux-amd64
-sudo ./cloud-browser-linux-amd64
+sudo install -m 0755 cloud-browser-linux-amd64 /usr/local/bin/cloud-browser
+sudo cloud-browser setup
 ```
 
 程序在后台启动仅监听本机的一次性向导，并显示 SSH 转发命令。网页先让你选择数据库来源，再设置域名、管理员账号和并发容量。程序会复用现有 Docker；缺少 Docker 时只在提交安装或测试已有数据库连接后安装。
