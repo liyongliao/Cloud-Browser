@@ -1,6 +1,6 @@
 # 验收记录
 
-日期：2026-09-14。状态：**首版源码与构建产物已交付；原生服务器运行验收尚未完成。**
+日期：2026-09-16。状态：**首版源码、发布产物、原生 Ubuntu 安装和 Debian 既有部署接入均已通过；容量与特定网站验收仍待完成。**
 
 ## 已通过
 
@@ -22,20 +22,20 @@
 | 按需数据库 | 基础 Compose 不包含 PostgreSQL；只有内置覆盖文件声明数据库。打开向导不会执行安装；本机与远程环境文件不包含 PostgreSQL 服务变量 |
 | 数据库容器检查 | PostgreSQL 17 上从容器网络验证连接和建表回滚；管理员初始化重试返回“已存在”，用户表仍只有一行 |
 | 安装向导 | 真实浏览器验证内置、本机、远程三种来源切换、错误反馈、配置摘要与 390×844 手机布局 |
+| 发布包全新安装 | GitHub Actions 原生 Ubuntu 24.04 使用 `v0.2.1` 发布文件完成校验、向导启动和内置数据库安装；打开向导阶段没有 PostgreSQL 容器或卷，提交后各创建一个，重复执行仍保持一个 |
 
 本地环境为 macOS ARM64 + OrbStack。测试过程中修正了文件系统 symlink 处理、已完成操作幂等重试、控制权连接关闭、运行用户的 socket 目录权限，以及 KasmVNC 证书路径。
 
 浏览器镜像当前构建包含 Google Chrome 153.0.8010.36、KasmVNC 1.5.0。Chrome 使用非默认的持久化目录，以满足调试端口对独立 user-data-dir 的要求。
 
-## 运行环境阻塞
+## 本地模拟环境边界
 
 在 ARM 主机模拟运行 amd64 浏览器时，KasmVNC 已启动；Chrome 报告 namespace `clone: Invalid argument`，伴随 QEMU/ptrace 不支持错误，沙箱初始化失败。保留了非 root、no-new-privileges、seccomp 和 Chrome 沙箱要求，没有以关闭沙箱的方式绕过。
 
-因此，**不能把此次运行标记为远程浏览器端到端通过**。运行日志保存在本地 `artifacts/container-smoke.log`。AppArmor 与宿主防火墙脚本没有在这台 macOS 主机上执行。
+因此没有用这次 ARM 模拟结果代替原生验收。运行日志保存在本地 `artifacts/container-smoke.log`；原生 x86_64 Ubuntu 安装与 Debian 运行结果单独记录如下。
 
 ## 待在目标服务器执行
 
-- `sudo ./scripts/smoke-browser.sh`：原生 x86_64 Chrome、VNC/CDP、网络阻断、正常停止与持久化挂载。
 - `npm run acceptance`：配置三个测试账号和部署域名后，运行默认 60 分钟验收。当前未提供目标地址/账号，套件明确显示 **skipped**，不算通过。
 - `./scripts/observe.sh 3600`：记录三用户场景 CPU、内存、网络与 OOM；确定 4 核/8 GB 是否达到容量目标。
 - 人工验证中文组合输入、手机触摸与软键盘、网站文件选择器、浏览器 Cookie/标签页恢复，以及连续 30 分钟有声音视频播放。
@@ -48,7 +48,7 @@
 ## 产物
 
 - `extension/dist/`：可加载的 Chrome/Edge MV3 扩展。
-- `artifacts/cloud-browser-extension-0.1.0.zip`：插件安装包，解压后加载目录。
+- GitHub Release 的 `cloud-browser-extension.zip`：插件安装包，解压后加载目录。
 - `web/dist/`：Web 静态生产产物。
 - `artifacts/screenshots/desktop.png`、`mobile.png`：本地控制面页面截图。
 - `api/openapi.yaml`：HTTP 契约；`docs/deployment.md`：安装、备份、恢复与验收步骤。
@@ -57,4 +57,6 @@
 
 已在原生 x86_64 Debian 13 服务器完成部署。单用户端到端测试、Chrome 实际音频信号、Cookie/localStorage/标签恢复及加密备份临时库恢复均已通过。之前关于“尚无原生运行验证”的描述属于本地开发阶段记录。3 用户长时间容量与视频、手机人工验收仍未完成。
 
-单文件管理程序已在该服务器识别并接入既有 `/opt/cloud-browser` 部署。接入前后 PostgreSQL 容器 ID、`cloud-browser_database` 数据卷和用户数量保持一致，四个服务持续运行且健康检查通过；过程中没有创建第二个 PostgreSQL。全新 Ubuntu 24.04 和 Debian 13 的发布文件端到端安装将在 `v0.2.0` 发布工作流完成后继续记录。
+单文件管理程序已在该服务器识别并接入既有 `/opt/cloud-browser` 部署。接入前后 PostgreSQL 容器 ID、`cloud-browser_database` 数据卷和用户数量保持一致，四个服务持续运行且健康检查通过；过程中没有创建第二个 PostgreSQL。
+
+`v0.2.1` 发布文件在全新的原生 Ubuntu 24.04 GitHub Runner 上完成了自动验收：SHA-256 校验通过；仅打开向导时没有新增 PostgreSQL 镜像、容器或卷；提交内置模式后应用健康、管理员账号为一条，并且重复运行安装命令仍只有一个数据库容器和一个数据卷。对应运行记录为 [install-smoke #35080974261](https://github.com/liyongliao/Cloud-Browser/actions/runs/35080974261)。全新 Debian 13 裸机安装尚未另行执行，当前 Debian 13 证据覆盖既有部署接入、服务运行和数据保持。
