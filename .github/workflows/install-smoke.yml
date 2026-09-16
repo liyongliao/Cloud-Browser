@@ -1,0 +1,65 @@
+name: install-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to verify
+        required: true
+        default: v0.2.0
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Download and verify release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          base="https://github.com/${{ github.repository }}/releases/download/$VERSION"
+          curl -fLO "$base/cloud-browser-linux-amd64"
+          curl -fLO "$base/cloud-browser-linux-amd64.sha256"
+          sha256sum -c cloud-browser-linux-amd64.sha256
+          chmod 755 cloud-browser-linux-amd64
+          sudo install -m 0755 cloud-browser-linux-amd64 /usr/local/bin/cloud-browser
+          cloud-browser version
+      - name: Verify opening wizard has no database side effects
+        run: |
+          set -euo pipefail
+          test -z "$(docker ps -aq --filter name=cloud-browser-postgres)"
+          sudo cloud-browser setup
+          curl -fsS http://127.0.0.1:8090/ >/dev/null
+          test -z "$(docker ps -aq --filter name=cloud-browser-postgres)"
+          test -z "$(docker volume ls -q --filter name=cloud-browser-database)"
+      - name: Install with one internal PostgreSQL
+        run: |
+          set -euo pipefail
+          token=$(sudo tr -d '\n' </var/lib/cloud-browser/setup-token)
+          curl -fsS -X POST http://127.0.0.1:8090/api/setup/complete \
+            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            --data-binary '{"domain":"browser.example.test","gatewayMode":"reverse-proxy","databaseMode":"internal","databaseHost":"","databasePort":0,"databaseName":"","databaseUser":"","databasePassword":"","databaseSSLMode":"","adminEmail":"admin@example.test","adminPassword":"temporary-test-password","maxSessions":1}'
+          for attempt in $(seq 1 180); do
+            response=$(curl -fsS http://127.0.0.1:8090/api/setup/status -H "Authorization: Bearer $token")
+            printf '%s\n' "$response"
+            printf '%s' "$response" | grep -q '"state":"COMPLETE"' && break
+            if printf '%s' "$response" | grep -q '"state":"FAILED"'; then exit 1; fi
+            sleep 5
+          done
+          test -f /var/lib/cloud-browser/.setup-complete
+          curl -fsS http://127.0.0.1:18088/healthz
+          test "$(docker ps -aq --filter name=cloud-browser-postgres-1 | wc -l)" -eq 1
+          test "$(docker volume ls -q --filter name=cloud-browser-database | wc -l)" -eq 1
+          test "$(docker exec cloud-browser-postgres-1 psql -U cloudbrowser -d cloudbrowser -Atc 'select count(*) from users')" -eq 1
+      - name: Verify retry reuses the deployment
+        run: |
+          set -euo pipefail
+          sudo cloud-browser setup
+          sudo cloud-browser doctor
+          test "$(docker ps -aq --filter name=cloud-browser-postgres-1 | wc -l)" -eq 1
+          test "$(docker volume ls -q --filter name=cloud-browser-database | wc -l)" -eq 1
