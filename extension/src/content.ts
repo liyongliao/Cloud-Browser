@@ -22,8 +22,8 @@ if (!globalThis.__cloudBrowserBridgeInjected) {
 }
 
 function installTopBridge() {
-  document.documentElement.dataset.cloudBrowserExtension = "0.3.0";
-  sendToCloud("EXTENSION_READY", { version: "0.3.0" });
+  document.documentElement.dataset.cloudBrowserExtension = "0.3.1";
+  sendToCloud("EXTENSION_READY", { version: "0.3.1" });
   window.addEventListener("message", (event) => {
     if (
       event.origin !== location.origin ||
@@ -31,7 +31,7 @@ function installTopBridge() {
     )
       return;
     if (event.data.type === "EXTENSION_PING") {
-      sendToCloud("EXTENSION_READY", { version: "0.3.0" });
+      sendToCloud("EXTENSION_READY", { version: "0.3.1" });
     }
     if (event.data.type === "WRITE_LOCAL_CLIPBOARD") {
       void sendRuntime({

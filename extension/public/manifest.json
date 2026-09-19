@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Cloud Browser · 随身浏览器",
   "description": "一键将网页送到你的云端 Chrome，随时随地继续浏览，并提供输入法、剪贴板与文件桥接增强。",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "permissions": [
     "activeTab",
     "contextMenus",

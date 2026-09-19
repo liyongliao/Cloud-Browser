@@ -105,6 +105,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message.type === "PING") {
-    sendResponse({ pong: true, version: "0.3.0" });
+    sendResponse({ pong: true, version: "0.3.1" });
   }
 });

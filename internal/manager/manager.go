@@ -277,13 +277,16 @@ func findInstallation(persistLegacy bool) (Installation, error) {
 	statePath := filepath.Join(root, "installation.json")
 	if data, err := os.ReadFile(statePath); err == nil {
 		var installation Installation
-		if json.Unmarshal(data, &installation) == nil && installation.Root != "" {
+		if json.Unmarshal(data, &installation) == nil && validInstallation(installation) {
 			return installation, nil
 		}
 	}
 	if _, err := os.Stat(filepath.Join(root, ".setup-complete")); err == nil {
 		mode := envValue(filepath.Join(root, ".env"), "DATABASE_MODE")
-		return Installation{Kind: "managed", Root: root, DatabaseMode: mode, Version: Version}, nil
+		installation := Installation{Kind: "managed", Root: root, DatabaseMode: mode, Version: Version}
+		if validInstallation(installation) {
+			return installation, nil
+		}
 	}
 	_, legacyEnvErr := os.Stat(filepath.Join(legacyRoot, ".env"))
 	_, legacyComposeErr := os.Stat(filepath.Join(legacyRoot, "compose.yaml"))
@@ -301,6 +304,23 @@ func findInstallation(persistLegacy bool) (Installation, error) {
 		return installation, nil
 	}
 	return Installation{}, errors.New("尚未安装 Cloud Browser，请运行 cloud-browser setup")
+}
+
+func validInstallation(installation Installation) bool {
+	if installation.Root == "" || !filepath.IsAbs(installation.Root) {
+		return false
+	}
+	required := []string{".env", "compose.yaml"}
+	if installation.DatabaseMode == "internal" {
+		required = append(required, "compose.database.yaml")
+	}
+	for _, name := range required {
+		info, err := os.Stat(filepath.Join(installation.Root, name))
+		if err != nil || !info.Mode().IsRegular() {
+			return false
+		}
+	}
+	return true
 }
 
 func status() error {

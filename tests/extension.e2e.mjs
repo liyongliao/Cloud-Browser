@@ -57,7 +57,7 @@ try {
   await opened.addScriptTag({ path: path.resolve("extension/dist/content.js") });
   assert.equal(
     await opened.locator("html").getAttribute("data-cloud-browser-extension"),
-    "0.3.0",
+    "0.3.1",
   );
   const bridge = await deadline("bridge handshake", opened.evaluate(
     () =>
@@ -73,7 +73,7 @@ try {
         window.postMessage({ channel, type: "EXTENSION_PING" }, location.origin);
       }),
   ));
-  assert.equal(bridge, "0.3.0");
+  assert.equal(bridge, "0.3.1");
 
   const viewer = await context.newPage();
   await viewer.goto("https://browser.example.test/view/test/vnc.html");

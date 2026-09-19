@@ -70,3 +70,31 @@ func TestEmbeddedRuntimeComposeHasNoPostgresService(t *testing.T) {
 		t.Fatal("base runtime compose declares PostgreSQL")
 	}
 }
+
+func TestRecordedInstallationRequiresRuntimeFiles(t *testing.T) {
+	root := t.TempDir()
+	installation := Installation{
+		Kind: "legacy", Root: filepath.Join(root, "removed"),
+		DatabaseMode: "internal", Version: "source",
+	}
+	if validInstallation(installation) {
+		t.Fatal("missing deployment directory was accepted")
+	}
+	if err := os.MkdirAll(installation.Root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{".env", "compose.yaml"} {
+		if err := os.WriteFile(filepath.Join(installation.Root, name), []byte("test\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if validInstallation(installation) {
+		t.Fatal("internal database deployment without its compose overlay was accepted")
+	}
+	if err := os.WriteFile(filepath.Join(installation.Root, "compose.database.yaml"), []byte("services: {}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if !validInstallation(installation) {
+		t.Fatal("complete deployment files were rejected")
+	}
+}

@@ -93,6 +93,8 @@ sudo cloud-browser version
 
 旧版源码部署位于 `/opt/cloud-browser` 时，首次运行新程序会识别并记录现有目录，然后显示原服务状态。它不会重新创建管理员、数据库、数据卷或升级镜像。
 
+从 `v0.3.1` 起，程序会同时检查记录中的 `.env` 和 Compose 文件。旧目录已经移除、但安装记录仍残留时，会把它视为未安装并重新进入向导，不会因为失效路径中断；`/srv/cloud-browser` 中已有的 Profile 和备份不会被自动删除。
+
 ## 常见问题
 
 “数据库连接失败”：先区分本机与远程。本机实例检查 `listen_addresses`、`pg_hba.conf` 和 Docker 网段；远程实例检查服务器出口 IP、云防火墙、账号权限和 TLS 配置。
@@ -100,6 +102,8 @@ sudo cloud-browser version
 “域名无法申请证书”：确认 DNS 已指向服务器公网 IP，80/443 未被其他服务占用，云防火墙允许访问。已有其他网关时改选反向代理模式。
 
 “安装页面关闭了”：运行 `sudo cloud-browser setup` 重新显示链接。安装在后台运行，日志位于 `/var/lib/cloud-browser/setup.log`。
+
+“提示部署目录不存在”：先更新至最新管理程序并重新运行 `sudo cloud-browser setup`。新版会忽略指向已删除目录的旧安装记录；不要为解决这个提示删除 `/srv/cloud-browser/profiles` 或备份目录。
 
 “外部数据库如何备份”：使用数据库服务商快照或独立 `pg_dump`。Cloud Browser 不停止或备份本机已有及远程数据库；Profile 仍应在浏览器停止后备份。
 
