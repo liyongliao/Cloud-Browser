@@ -365,3 +365,30 @@ func TestStoppedLeaseCannotRevive(t *testing.T) {
 		t.Fatal("old controller revived after restart", code)
 	}
 }
+
+func TestFileChooserRequiresCurrentLease(t *testing.T) {
+	f := fixtureNew(t)
+	f.a.setState(context.Background(), f.id, "RUNNING", "")
+	code, lease := f.req(t, "POST", "/api/v1/browser/takeover", map[string]string{}, "")
+	if code != 200 {
+		t.Fatal(code, lease)
+	}
+	token := lease["lease"].(string)
+	code, _ = f.req(t, "GET", "/control/"+token+"/file-chooser", nil, "")
+	if code != 200 {
+		t.Fatal("file chooser watch rejected", code)
+	}
+	code, _ = f.req(t, "POST", "/control/"+token+"/file-chooser/"+auth.ID(), map[string]any{"names": []string{"example.txt"}}, "")
+	if code != 200 {
+		t.Fatal("file chooser completion rejected", code)
+	}
+	code, _ = f.req(t, "POST", "/control/"+token+"/file-chooser/not-an-id", map[string]any{"names": []string{}}, "")
+	if code != 400 {
+		t.Fatal("invalid chooser id accepted", code)
+	}
+	_, _ = f.req(t, "POST", "/api/v1/browser/takeover", map[string]string{}, "")
+	code, _ = f.req(t, "GET", "/control/"+token+"/file-chooser", nil, "")
+	if code != 409 {
+		t.Fatal("revoked lease kept file chooser access", code)
+	}
+}

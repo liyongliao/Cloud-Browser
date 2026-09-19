@@ -678,6 +678,12 @@ nav {
   white-space: nowrap;
   font-size: 10px;
 }
+.bridge-active-badge {
+  align-items: center;
+  color: #26734d;
+  display: inline-flex;
+  gap: 5px;
+}
 .input-panel {
   padding: 15px;
   border-top: 1px solid #e0e7da;

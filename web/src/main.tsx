@@ -29,6 +29,7 @@ import {
   Plus,
   Users,
   KeyRound,
+  Zap,
 } from "lucide-react";
 import {
   APIError,
@@ -45,6 +46,7 @@ import "./style.css";
 const hash = new URLSearchParams(location.hash.slice(1));
 const incoming = hash.get("open");
 const invitation = hash.get("invite");
+const bridgeChannel = "cloud-browser-extension-v1";
 if (location.hash)
   history.replaceState(null, "", location.pathname + location.search);
 if (incoming) sessionStorage.setItem("cb_pending_url", incoming);
@@ -72,10 +74,12 @@ function App() {
     } | null>(null),
     [audio, setAudio] = useState(false),
     [audioState, setAudioState] = useState(""),
-    [text, setText] = useState("");
+    [text, setText] = useState(""),
+    [extensionReady, setExtensionReady] = useState(false);
   const soundStop = useRef<(() => void) | null>(null),
     viewer = useRef<HTMLDivElement>(null),
-    pendingConsumed = useRef(false);
+    pendingConsumed = useRef(false),
+    chooserPending = useRef(false);
   async function run(task: () => Promise<void>, message = "正在处理…") {
     if (busy) return;
     setBusy(message);
@@ -158,6 +162,132 @@ function App() {
     };
   }, [lease?.lease]);
   useEffect(() => () => soundStop.current?.(), []);
+  useEffect(() => {
+    async function handleBridgeMsg(event: MessageEvent) {
+      if (event.origin !== location.origin || event.data?.channel !== bridgeChannel)
+        return;
+      if (event.data.type === "EXTENSION_READY") {
+        setExtensionReady(true);
+      }
+      if (event.data.type === "INSERT_TEXT" && event.data.text) {
+        void input({ text: String(event.data.text), action: "insert" }).catch((e) =>
+          setError(e instanceof Error ? e.message : "输入失败"),
+        );
+      }
+      if (event.data.type === "PASTE_FROM_LOCAL") {
+        void input({ text: String(event.data.text ?? ""), action: "paste" }).catch(
+          (e) => setError(e instanceof Error ? e.message : "粘贴失败"),
+        );
+      }
+      if (event.data.type === "REMOTE_KEY" && event.data.key) {
+        void input({ key: String(event.data.key) }).catch((e) =>
+          setError(e instanceof Error ? e.message : "按键发送失败"),
+        );
+      }
+      if (event.data.type === "COPY_TO_LOCAL") {
+        void input({ action: event.data.action === "cut" ? "cut" : "copy" }).then(
+          (result) =>
+            window.postMessage(
+              {
+                channel: bridgeChannel,
+                type: "WRITE_LOCAL_CLIPBOARD",
+                text: result?.text ?? "",
+              },
+              location.origin,
+            ),
+        ).catch((e) => setError(e instanceof Error ? e.message : "复制失败"));
+      }
+      if (event.data.type === "FILES_SELECTED") {
+        const id = String(event.data.id ?? "");
+        const selected = Array.isArray(event.data.files)
+          ? event.data.files.filter(
+              (file: unknown): file is File => file instanceof File,
+            )
+          : [];
+        void (async () => {
+          setBusy(selected.length ? "正在把本地文件交给云端网页…" : "正在取消文件选择…");
+          setError("");
+          const names: string[] = [];
+          try {
+            if (selected.length > 20)
+              throw new Error("一次最多选择 20 个文件");
+            for (const file of selected) {
+              if (file.size > 200 * 1024 * 1024)
+                throw new Error(`${file.name} 超过 200 MB`);
+              const form = new FormData();
+              form.append("file", file);
+              const uploaded = await request<FileEntry>(
+                "/api/v1/files",
+                "POST",
+                form,
+              );
+              names.push(uploaded.name);
+            }
+            await request(`/control/${lease?.lease}/file-chooser/${id}`, "POST", {
+              names,
+            });
+            await loadFiles();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "文件上传失败");
+          } finally {
+            chooserPending.current = false;
+            setBusy("");
+          }
+        })();
+      }
+    }
+    window.addEventListener("message", handleBridgeMsg);
+    window.postMessage(
+      { channel: bridgeChannel, type: "EXTENSION_PING" },
+      location.origin,
+    );
+    return () => window.removeEventListener("message", handleBridgeMsg);
+  }, [lease?.lease]);
+
+  useEffect(() => {
+    if (!lease || !extensionReady) return;
+    let live = true;
+    async function watchFileChoosers() {
+      while (live) {
+        if (chooserPending.current) {
+          await new Promise((resolve) => setTimeout(resolve, 250));
+          continue;
+        }
+        try {
+          const response = await fetch(`/control/${lease?.lease}/file-chooser`, {
+            credentials: "same-origin",
+          });
+          if (!live) return;
+          if (response.status === 204) continue;
+          if (!response.ok) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            continue;
+          }
+          const chooser = (await response.json()) as {
+            id: string;
+            multiple: boolean;
+          };
+          chooserPending.current = true;
+          window.postMessage(
+            {
+              channel: bridgeChannel,
+              type: "OPEN_LOCAL_FILE_CHOOSER",
+              ...chooser,
+            },
+            location.origin,
+          );
+        } catch {
+          if (live) await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    void watchFileChoosers();
+    return () => {
+      live = false;
+      chooserPending.current = false;
+    };
+  }, [lease?.lease, extensionReady]);
+
   function disconnect() {
     soundStop.current?.();
     soundStop.current = null;
@@ -456,6 +586,44 @@ function App() {
                       已连接
                     </span>
                     <div className="tool-actions">
+                      {extensionReady && (
+                        <>
+                          <button
+                            onClick={() =>
+                              void run(async () => {
+                                const result = await input({ action: "copy" });
+                                window.postMessage(
+                                  {
+                                    channel: bridgeChannel,
+                                    type: "WRITE_LOCAL_CLIPBOARD",
+                                    text: result?.text ?? "",
+                                  },
+                                  location.origin,
+                                );
+                              }, "正在复制到本机…")
+                            }
+                            title="复制远程选区到本机剪贴板"
+                          >
+                            <Clipboard size={17} />
+                            复制
+                          </button>
+                          <button
+                            onClick={() =>
+                              window.postMessage(
+                                {
+                                  channel: bridgeChannel,
+                                  type: "REQUEST_LOCAL_PASTE",
+                                },
+                                location.origin,
+                              )
+                            }
+                            title="把本机剪贴板粘贴到远程焦点"
+                          >
+                            <Clipboard size={17} />
+                            粘贴
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() =>
                           void run(async () => {
@@ -527,7 +695,13 @@ function App() {
                     referrerPolicy="no-referrer"
                   />
                   <div className="viewer-hint">
-                    触摸、缩放与剪贴板选项可在画面侧边菜单调整。切换设备后，点击“接管并继续浏览”。
+                    {extensionReady ? (
+                      <span className="bridge-active-badge">
+                        <Zap size={14} /> 本机能力桥已连接：输入法、复制粘贴和文件选择已直通
+                      </span>
+                    ) : (
+                      <span>触摸、缩放与剪贴板选项可在画面侧边菜单调整。安装 Chrome 插件可体验全自动无感同步。</span>
+                    )}
                     <button onClick={disconnect}>断开连接</button>
                   </div>
                   {panel === "input" && (

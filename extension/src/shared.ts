@@ -18,6 +18,10 @@ export function handoffURL(server: string, target?: string) {
   if (u.username || u.password) throw new Error("不支持包含登录凭据的网址。");
   return base + "/#" + new URLSearchParams({ open: u.href }).toString();
 }
+export function serverPattern(server: string) {
+  const url = new URL(normalizeServer(server));
+  return `${url.protocol}//${url.hostname}/*`;
+}
 export async function openCloud(target?: string) {
   const { server } = await chrome.storage.local.get("server");
   if (!server) throw new Error("请先设置你的 Cloud Browser 服务地址。");

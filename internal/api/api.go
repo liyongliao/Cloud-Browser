@@ -87,6 +87,24 @@ func (a *API) Handler() http.Handler {
 		}
 		a.proxy(w, r, "/containers/"+who(r).ID+"/agent/input")
 	})
+	register("GET /control/{lease}/file-chooser", func(w http.ResponseWriter, r *http.Request) {
+		if !a.lease(r) {
+			protocol.Error(w, 409, "CONTROL_REVOKED")
+			return
+		}
+		a.proxy(w, r, "/containers/"+who(r).ID+"/agent/file-chooser")
+	})
+	register("POST /control/{lease}/file-chooser/{chooser}", func(w http.ResponseWriter, r *http.Request) {
+		if !protocol.ValidID(r.PathValue("chooser")) {
+			protocol.Error(w, 400, "INVALID_ID")
+			return
+		}
+		if !a.lease(r) {
+			protocol.Error(w, 409, "CONTROL_REVOKED")
+			return
+		}
+		a.proxy(w, r, "/containers/"+who(r).ID+"/agent/file-chooser/"+r.PathValue("chooser"))
+	})
 	register("GET /control/{lease}/status", func(w http.ResponseWriter, r *http.Request) {
 		if !a.lease(r) {
 			protocol.Error(w, 409, "CONTROL_REVOKED")

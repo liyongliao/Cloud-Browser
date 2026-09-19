@@ -84,7 +84,7 @@ cat database.dump | docker compose -f compose.yaml -f compose.database.yaml exec
 
 ## 升级与回滚
 
-`v0.2.1` 管理程序暂不提供自动升级命令。升级前先停止新访问并完成数据库与 Profile 备份，阅读对应版本的发布说明，再使用发布文件中固定的镜像摘要更新。不要把 `latest` 作为可回滚版本记录。
+`v0.3.0` 管理程序暂不提供自动升级命令。升级前先停止新访问并完成数据库与 Profile 备份，阅读对应版本的发布说明，再使用发布文件中固定的镜像摘要更新。不要把 `latest` 作为可回滚版本记录。
 
 回滚 Chrome 必须同时恢复该镜像升级前的 Profile；直接把新版本 Profile 挂给旧 Chrome 可能失败。不要同时用两个容器挂载同一用户目录。自动升级和自动回滚会在后续版本单独设计。
 
@@ -94,9 +94,10 @@ cat database.dump | docker compose -f compose.yaml -f compose.database.yaml exec
 
 ```bash
 sudo ./scripts/smoke-browser.sh
+sudo ./scripts/smoke-native-bridge.sh
 ```
 
-该检查验证 Chrome/CDP 和 KasmVNC 启动、内部鉴权、基本网址操作、私网阻断和持久化挂载，不等于已经验证网站 Cookie 或影音体验。
+第一项检查验证 Chrome/CDP 和 KasmVNC 启动、内部鉴权、基本网址操作、私网阻断和持久化挂载。第二项在真实 Chrome 内验证中文文本注入、双向文本剪贴板和远程文件选择器。两项都不等于已经验证特定网站 Cookie、操作系统输入法候选窗或影音体验。
 
 再创建 3 个专用受邀测试账号。将账号写入本地 `acceptance-users.json`，格式为含 3 项的 `[{"email":"...","password":"..."}]`，设为 0600；该文件已被 Git 忽略。不要使用正在工作的真实用户账号，测试结束会停止这三个浏览器。
 

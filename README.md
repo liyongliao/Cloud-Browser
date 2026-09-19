@@ -1,6 +1,6 @@
 # Cloud Browser
 
-把一台服务器变成属于账号的随身 Chrome。用户从电脑、平板或手机登录网页，就能继续使用同一份标签页、Cookie、收藏夹、历史记录、网站存储和文件；Chrome/Edge 插件可以把当前网址一键送到云端打开。
+把一台服务器变成属于账号的随身 Chrome。用户从电脑、平板或手机登录网页，就能继续使用同一份标签页、Cookie、收藏夹、历史记录、网站存储和文件；Chrome/Edge 插件既能把当前网址送到云端，也负责网页难以可靠调用的本机输入法、剪贴板和文件选择能力。
 
 ![Cloud Browser 登录页](docs/images/product-login.png)
 
@@ -84,6 +84,8 @@ flowchart LR
 | 网关与部署                           | Caddy、Docker Compose；可接入现有 Nginx                 |
 
 管理程序是静态 Linux 可执行文件，内嵌运行模板和隔离配置；正式发布版通过镜像摘要固定 API、Runner、网页网关和浏览器镜像。服务器不需要 Go、Node.js、Git 或本地镜像构建。
+
+插件只在用户设置并授权的 Cloud Browser 域名注入桥接脚本，不读取其他网站。未安装插件、手机浏览器或权限未授予时，网页中的“输入”和“文件”面板仍可使用。
 
 业务接口契约位于 [api/openapi.yaml](api/openapi.yaml)，一次性安装接口位于 [api/setup-openapi.yaml](api/setup-openapi.yaml)。安全与会话边界见 [架构说明](docs/architecture.md)，当前验证范围见 [验收记录](docs/verification.md)。
 

@@ -23,6 +23,7 @@ Browser Agent 拥有与用户浏览器相同的权限，不是用于隔离同一
 - 写操作校验完整 Origin；已登录写操作另需绑定登录会话的 CSRF token。
 - 无公开注册；邀请明文只在创建时返回，数据库保存摘要。
 - 扩展入口 `/#open=<encoded-url>` 在 React 初始化前读取和清除；登录前的待打开 URL 临时保存在该标签页 sessionStorage，提交后删除。
+- 扩展以可选站点权限限定到用户配置的 Cloud Browser 主机；内容脚本把本机输入法确认后的文本交给 Web，剪贴板只在复制、剪切、粘贴动作发生时通过 MV3 offscreen document 读写。更换服务器会撤销旧主机权限。
 - `/browser/open` 只接受 HTTP/HTTPS，拒绝显式本地/私网 URL。DNS、重定向和站点发起的任意请求仍由宿主网络规则约束，不能用 URL 校验替代网络隔离。
 
 ## 异步操作与恢复
@@ -44,6 +45,8 @@ Agent 在打开网址前写入 Profile 内的操作日志，再创建带 operati
 - `GET /audio/{lease}`：PCM 音频 WebSocket。
 - `GET /control/{lease}/status`：检查控制权。
 - `POST /control/{lease}/input`：中文粘贴、剪贴板和白名单按键；需 CSRF。
+- `GET /control/{lease}/file-chooser`：等待远程 Chrome 的文件框，仅当前控制设备可用。
+- `POST /control/{lease}/file-chooser/{id}`：用当前账号 Uploads 中的普通文件完成该文件框；需 CSRF。
 - `GET /api/v1/events`：浏览器状态 SSE，不被计为观看连接。
 
 HTTP lease 不能代替登录 Cookie。WebSocket 校验 Origin；控制权接管、注销和用户禁用会主动取消已有连接。每 2 秒再次验证数据库授权；画面连接另有 WebSocket ping，半开连接会被回收。只有有效画面连接刷新在线时间，音频、网页后台活动和仅打开首页不会阻止休眠。
@@ -54,7 +57,7 @@ KasmVNC 密码与 Agent token 只在内部服务之间使用。VNC iframe 保留
 
 文件列表仅展示 Uploads/Downloads 的普通文件，跳过临时下载和符号链接。文件 ID 是目录/文件名的 URL-safe 编码，不是权限凭据。下载始终按当前登录用户定位目录。实际打开通过持有的目录文件描述符与 openat(O_NOFOLLOW)，防止符号链接和路径逃逸。
 
-上传以隐藏临时文件写入、fsync 后改名，失败清理；所有上传串行检查软限额，避免多个并发上传共同越过限额。浏览器本身写盘不受此软限额硬约束。
+上传以隐藏临时文件写入、fsync 后改名，失败清理；所有上传串行检查软限额，避免多个并发上传共同越过限额。插件直连文件框时，Agent 通过 CDP 保存的 backend node 设置文件，文件名再次用 OpenRoot/Lstat 限定在当前用户 Uploads，拒绝符号链接和路径分隔符。浏览器本身写盘不受此软限额硬约束。
 
 音频 48 kHz/s16le/双声道，每帧 20 ms。Agent 队列最多 5 帧，阻塞写入 250 ms 后断开，前端最多缓冲 250 ms，转换至实际 AudioContext 采样率。静音、退出、接管时销毁音频上下文与连接。前端有限重连 5 次，不无限积累音频。
 

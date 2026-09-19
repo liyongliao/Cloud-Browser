@@ -1,11 +1,29 @@
 {
   "manifest_version": 3,
   "name": "Cloud Browser · 随身浏览器",
-  "description": "一键将网页送到你的云端 Chrome，随时随地继续浏览。",
-  "version": "0.2.1",
-  "permissions": ["activeTab", "contextMenus", "storage"],
-  "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_popup": "popup.html", "default_title": "Cloud Browser" },
+  "description": "一键将网页送到你的云端 Chrome，随时随地继续浏览，并提供输入法、剪贴板与文件桥接增强。",
+  "version": "0.3.0",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "scripting",
+    "offscreen",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Cloud Browser"
+  },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }
