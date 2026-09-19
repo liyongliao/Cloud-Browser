@@ -23,7 +23,7 @@
 | 按需数据库 | 基础 Compose 不包含 PostgreSQL；只有内置覆盖文件声明数据库。打开向导不会执行安装；本机与远程环境文件不包含 PostgreSQL 服务变量 |
 | 数据库容器检查 | PostgreSQL 17 上从容器网络验证连接和建表回滚；管理员初始化重试返回“已存在”，用户表仍只有一行 |
 | 安装向导 | 真实浏览器验证内置、本机、远程三种来源切换、错误反馈、配置摘要与 390×844 手机布局 |
-| 发布包全新安装 | GitHub Actions 原生 Ubuntu 24.04 使用 `v0.3.0` 发布文件完成校验、向导启动和内置数据库安装；打开向导阶段没有 PostgreSQL 容器或卷，提交后各创建一个，重复执行仍保持一个 |
+| 发布包全新安装 | GitHub Actions 原生 Ubuntu 24.04 使用 `v0.3.1` 发布文件完成校验、向导启动和内置数据库安装；打开向导阶段没有 PostgreSQL 容器或卷，提交后各创建一个，重复执行仍保持一个 |
 
 本地环境为 macOS ARM64 + OrbStack。测试过程中修正了文件系统 symlink 处理、已完成操作幂等重试、控制权连接关闭、运行用户的 socket 目录权限，以及 KasmVNC 证书路径。
 
@@ -60,4 +60,4 @@
 
 单文件管理程序已在该服务器识别并接入既有 `/opt/cloud-browser` 部署。接入前后 PostgreSQL 容器 ID、`cloud-browser_database` 数据卷和用户数量保持一致，四个服务持续运行且健康检查通过；过程中没有创建第二个 PostgreSQL。
 
-`v0.3.0` 发布文件在全新的原生 Ubuntu 24.04 GitHub Runner 上完成了自动验收：SHA-256 校验通过；仅打开向导时没有新增 PostgreSQL 镜像、容器或卷；提交内置模式后应用健康、管理员账号为一条，并且重复运行安装命令仍只有一个数据库容器和一个数据卷。对应运行记录为 [install-smoke #35439045114](https://github.com/liyongliao/Cloud-Browser/actions/runs/35439045114)。全新 Debian 13 裸机安装尚未另行执行，当前 Debian 13 证据覆盖既有部署接入、服务运行和数据保持。
+`v0.3.1` 发布文件在全新的原生 Ubuntu 24.04 GitHub Runner 上完成了自动验收：SHA-256 校验通过；仅打开向导时没有新增 PostgreSQL 镜像、容器或卷；提交内置模式后应用健康、管理员账号为一条，并且重复运行安装命令仍只有一个数据库容器和一个数据卷。对应运行记录为 [install-smoke #35442289792](https://github.com/liyongliao/Cloud-Browser/actions/runs/35442289792)。全新 Debian 13 裸机安装尚未另行执行，当前 Debian 13 证据覆盖既有部署接入、服务运行和数据保持。
